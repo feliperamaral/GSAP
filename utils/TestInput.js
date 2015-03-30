@@ -2,6 +2,7 @@ function TestInput() {
 
     var countInstances = 0;
     var inputInstances = {};
+
     var eases = {
         'Power0': {
             ease: function () {
@@ -71,6 +72,20 @@ function TestInput() {
     var types = {
         slider: {
             events: {change: 'slidechange'},
+            getVal: function (element) {
+                var $e = $(element.slider || element);
+
+                var value = $e.slider('values');
+                if (value.length === 0) {
+                    value = $e.slider('value');
+                }
+                return value;
+            },
+            setVal: function (element, value) {
+                $(element.slider || element)
+                        .slider(Array.isArray(value) ? 'values' : 'value', value)
+
+            },
             factory: function (params, allOptions) {
                 var defaultParam = {
                     value: allOptions.value !== undefined ? allOptions.value : 0,
@@ -80,14 +95,6 @@ function TestInput() {
                 var params = $.extend(defaultParam, params);
                 var slider = $('<div></div>');
 
-                slider[0].getInputVal = function () {
-                    var $e = $(this.slider || this);
-                    var value = $e.slider('values');
-                    if (value.length === 0) {
-                        value = $e.slider('value');
-                    }
-                    return value;
-                };
                 var updateShowValue = function (e, ui) {
                     sliderContainer
                             .find(params.valueOnSlider ? '.ui-slider-handle' : '.ti-slider-value')
@@ -96,9 +103,7 @@ function TestInput() {
                 if (params.showValue) {
                     var sliderContainer = $('<div class="ti-container-slider"><div class="ti-slider-value"></div></div>').prepend(slider);
                     sliderContainer[0].slider = slider[0];
-                    sliderContainer[0].getInputVal = slider[0].getInputVal;
-
-                    slider.on('slide', updateShowValue);
+                    slider.on('slide slidechange', updateShowValue);
                 }
 
                 slider.slider(params);
@@ -111,41 +116,43 @@ function TestInput() {
             }
         },
         ease: {
+            getVal: function (element) {
+                if (element.value === '') {
+                    return {
+                        string: '',
+                        fn: null
+                    };
+                }
+                var easeName = element.value.split('.');
+                if (easeName.length === 1) {
+                    easeName.push('ease');
+                }
+                return {
+                    string: element.value,
+                    fn: eases[easeName[0]][easeName[1]]
+                };
+            },
             factory: function (params, allOptions) {
                 var options = '<option></option>';
                 for (var easeName in eases) {
                     for (var easeFn in eases[easeName]) {
-                        if (easeFn === 'ease') {
-                            easeValue = easeName;
-                        } else {
+                        easeValue = easeName;
+                        if (easeFn != 'ease') {
                             easeValue = easeName + '.' + easeFn;
                         }
                         options += '<option>' + easeValue + '</option>';
                     }
-
                 }
-                var select = $('<select class="ti-input-ease">' + options + '</select>');
-
-                select[0].getInputVal = function () {
-                    if (this.value === '') {
-                        return {
-                            string: '',
-                            fn: null
-                        };
-                    }
-                    var easeName = this.value.split('.');
-                    if (easeName.length === 1) {
-                        easeName.push('ease');
-                    }
-                    return {
-                        string: this.value,
-                        fn: eases[easeName[0]][easeName[1]]
-                    };
-                };
-                return select;
+                return $('<select class="ti-input-ease">' + options + '</select>');
             }
         },
         checkbox: {
+            getVal: function (element) {
+                return $(element).prop('checked') ? element.value : undefined;
+            },
+            setVal: function (element, value) {
+                $(element).prop('checked', !!value);
+            },
             factory: function (params, allOptions) {
                 var paramsDefault = {
                     checked: false,
@@ -157,12 +164,35 @@ function TestInput() {
                         .val(params.value)
                         .prop('checked', params.checked);
 
-                checkbox[0].getInputVal = function () {
-                    return $(this).prop('checked') ? this.value : undefined;
-                };
                 return checkbox;
 
 
+
+            }
+        },
+        select: {
+            factory: function (params, allOptions) {
+                var paramsDefault = {
+                    options: [],
+                    value: params.value !== undefined ? params.value : allOptions.value,
+                    keyIsValue: true
+                };
+                params = $.extend(paramsDefault, params);
+                var select = $('<select></select>');
+
+                var options = params.options;
+
+
+                for (var i in options) {
+                    var option = $('<option>' + options[i] + '</option>');
+                    if (params.keyIsValue) {
+                        option.attr('value', i);
+                    }
+                    select.append(option);
+                }
+
+
+                return select;
 
             }
         }
@@ -180,9 +210,7 @@ function TestInput() {
             return types[type].factory(paramsType, allOptions);
         }
         var input = $('<input type="' + type + '">');
-        input[0].getInputVal = function () {
-            return this.value;
-        };
+
         return input;
     };
 
@@ -197,6 +225,8 @@ function TestInput() {
         }
     };
     var ctx = this;
+
+    this.inputInstances = inputInstances;
 
     this.createInput = function (options) {
         var optionsDefault = {
@@ -216,7 +246,10 @@ function TestInput() {
         var bt = createElementInput(options.type, $.extend({}, options.typeParams), options);
         bt.attr('id', options.id);
 
-        inputInstances[options.namespace] = bt[0];
+        inputInstances[options.namespace] = {
+            element: bt[0],
+            type: options.type
+        };
 
         if (options.value != undefined) {
             bt.val(options.value);
@@ -249,7 +282,7 @@ function TestInput() {
 
     this.createInputs = function (options, commonParams) {
         for (var i = 0; i < options.length; i++) {
-            ctx.createInput($.extend(commonParams, options[i]));
+            ctx.createInput($.extend({}, commonParams, options[i]));
         }
     };
 
@@ -257,15 +290,28 @@ function TestInput() {
     this.getVal = function (namespace) {
         if (inputInstances[namespace] === undefined)
             return undefined;
-        if (inputInstances[namespace].getInputVal !== undefined)
-            return inputInstances[namespace].getInputVal();
 
-        return inputInstances[namespace].value;
+        if (types[inputInstances[namespace].type].getVal !== undefined)
+            return types[inputInstances[namespace].type].getVal(inputInstances[namespace].element);
+
+        return inputInstances[namespace].element.value;
+    };
+    this.setVal = function (namespace, value) {
+        if (inputInstances[namespace] === undefined)
+            return this;
+        var s = inputInstances[namespace];//Shorcut
+
+        if (types[s.type].setVal !== undefined)
+            return types[s.type].setVal(s.element, value);
+
+        $(s.element).val(value);
+        return this;
+
     };
     this.get = function (namespace) {
-        return inputInstances[namespace] || false;
+        return inputInstances[namespace].element || false;
     };
     this.$ = function (namespace) {
-        return $(inputInstances[namespace]) || false;
+        return $(inputInstances[namespace].element) || false;
     };
 }
