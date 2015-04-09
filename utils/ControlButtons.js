@@ -22,23 +22,38 @@ function ControlButtons(container, timeline) {
             console.error('O parâmetro "container" não é um element DOM');
             return;
         }
+        var sliderContainer = document.createElement('div');
+        sliderContainer.classList.add('CB-slider');
+
+
+        container.appendChild(sliderContainer);
+        container = sliderContainer;//Overwrite 
+
         setSlider();
         setButtons();
     }
 
     function setSlider() {
         slider = document.createElement('div');
-        slider.classList.add('CB-slider');
+
+        var timeText = document.createElement('div');
+        
+        container.appendChild(timeText);
 
         container.appendChild(slider);
+        
         var $slider = $(slider).slider({
             slide: function (event, ui) {
-                tl.progress(ui.value / 100);
+                var p = ui.value / 100;
+                tl.progress(p);
                 tl.stop();
+
+                timeText.innerHTML = p.toFixed(3);
             }
         });
 
         tl.eventCallback('onUpdate', function () {
+            timeText.innerHTML = this.progress().toFixed(3);
             $slider.slider('value', (this.progress() * 100).toFixed(0));
         });
     }
@@ -47,7 +62,6 @@ function ControlButtons(container, timeline) {
         var btName,
                 bt,
                 cb = function (e) {
-
                     tl[this.dataset.fn]();
                 };
 
