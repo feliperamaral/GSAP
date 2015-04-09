@@ -1,21 +1,20 @@
 function ControlButtons(container, timeline) {
+    "use strict";
     var tl = timeline;
+    var slider;
     var buttons = {
         play: {fn: 'play'},
         pause: {fn: 'pause'},
         resume: {fn: 'resume'},
         reverse: {fn: 'reverse'},
-        restart: {fn: 'restart'},
+        restart: {fn: 'restart'}
     };
-    var slider;
     var btnInstances = [];
     var btnContainer = document.createElement('div');
-    ;
 
 
-
-    var init = function () {
-        if (typeof container == 'string') {
+    function init() {
+        if (typeof container === 'string') {
             container = document.getElementById(container) || document.querySelector(container);
         }
 
@@ -25,12 +24,10 @@ function ControlButtons(container, timeline) {
         }
         setSlider();
         setButtons();
+    }
 
-    };
-
-
-    var setSlider = function () {
-        var slider = document.createElement('div');
+    function setSlider() {
+        slider = document.createElement('div');
         slider.classList.add('CB-slider');
 
         container.appendChild(slider);
@@ -44,22 +41,27 @@ function ControlButtons(container, timeline) {
         tl.eventCallback('onUpdate', function () {
             $slider.slider('value', (this.progress() * 100).toFixed(0));
         });
-    };
-    var setButtons = function () {
+    }
 
-        for (var btName in buttons) {
-            var bt = document.createElement('button');
+    function setButtons() {
+        var btName,
+                bt,
+                cb = function (e) {
+
+                    tl[this.dataset.fn]();
+                };
+
+        for (btName in buttons) {
+            bt = document.createElement('button');
             bt.innerHTML = btName + '()';
             bt.dataset.fn = btName;
             btnContainer.appendChild(bt);
-            bt.addEventListener('click',function(e){
-                
-                tl[this.dataset.fn]();
-            });
+            bt.addEventListener('click', cb);
         }
 
         btnContainer.classList.add('btn-container');
         container.appendChild(btnContainer);
-    };
+    }
+
     init();
 }

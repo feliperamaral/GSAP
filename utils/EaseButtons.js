@@ -1,5 +1,5 @@
 function EaseButtons(container) {
-
+    "use strict";
 
     var easeNames = [
         'Power0',
@@ -20,7 +20,7 @@ function EaseButtons(container) {
     var easeTypes = [
         'easeIn',
         'easeInOut',
-        'easeOut',
+        'easeOut'
     ];
     var easeFuncs = {
         'Power0': {
@@ -92,16 +92,29 @@ function EaseButtons(container) {
             easeIn: Sine.easeIn,
             easeInOut: Sine.easeInOut,
             easeOut: Sine.easeOut
-        },
-    }
+        }
+    };
     var buttonsInstances = {
         ease: [],
         type: []
     };
+
     this.buttonsInstances = buttonsInstances;
 
-    var init = function () {
-        if (typeof container == 'string') {
+    function selectOnClick(e) {
+        var i, bt;
+        for (i in buttonsInstances[e.target.dataset.namespace]) {
+            bt = buttonsInstances[e.target.dataset.namespace][i];
+            if (bt === e.target) {
+                bt.classList.add('active');
+            } else {
+                bt.classList.remove('active');
+            }
+        }
+    }
+
+    function init() {
+        if (typeof container === 'string') {
             container = document.getElementById(container) || document.querySelector(container);
         }
 
@@ -109,13 +122,13 @@ function EaseButtons(container) {
             console.error('O parâmetro "container" não é um element DOM');
             return;
         }
-        var buttons = {ease: easeNames, type: easeTypes};
-        for (var ii in buttons) {
+        var ii, i, button, buttons = {ease: easeNames, type: easeTypes};
+        for (ii in buttons) {
 
-            for (var i in buttons[ii]) {
-                var button = document.createElement('button');
+            for (i in buttons[ii]) {
+                button = document.createElement('button');
                 buttonsInstances[ii].push(button);
-                if (i == 0) {
+                if (i === 0) {
                     button.classList.add('active');
                 }
                 button.classList.add('btn');
@@ -133,47 +146,30 @@ function EaseButtons(container) {
 
 
         }
-    };
-
-    var selectOnClick = function (e) {
-
-        for (var i in buttonsInstances[e.target.dataset.namespace]) {
-            var bt = buttonsInstances[e.target.dataset.namespace][i];
-            if (bt == e.target) {
-                bt.classList.add('active');
-            } else {
-                bt.classList.remove('active');
-            }
-        }
-    };
+    }
 
     this.getEase = function () {
-        var data = {
+        var namespace, i, bt, data = {
             ease: '',
             type: '',
             easeFn: null
         };
-        for (var namespace in buttonsInstances) {
-            for (var i in  buttonsInstances[namespace]) {
-                var bt = buttonsInstances[namespace][i];
+        for (namespace in buttonsInstances) {
+            for (i in  buttonsInstances[namespace]) {
+                bt = buttonsInstances[namespace][i];
                 if (bt.classList.contains('active')) {
                     data[namespace] = bt.value;
                     break;
                 }
             }
         }
-        if (easeFuncs[data.ease][data.type] != undefined) {
+        if (easeFuncs[data.ease][data.type] !== undefined) {
             data.easeFn = easeFuncs[data.ease][data.type];
         } else {
-            data.easeFn = easeFuncs[data.ease]['ease']();
+            data.easeFn = easeFuncs[data.ease].ease();
         }
         return data;
     };
 
-
-
-
     init();
-};
-
-
+}
